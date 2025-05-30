@@ -33,7 +33,7 @@ jobs:
           author_name: Jonathan Canevese
           author_email: work@jcanevese.it
           message: "Aggiornata cache F1"
-          add: "*.json,src/cache.json"
+          add: "*.json"
 
         # - name: Commit & push cache.json
         #   run: |
