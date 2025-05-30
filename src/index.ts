@@ -129,3 +129,5 @@ app.listen(3000, () => {
     `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
   );
 });
+
+export { regenerateCache };
