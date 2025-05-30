@@ -2,11 +2,11 @@
   "name": "fiaf1-files",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "elysia": "latest",
+    "node-html-parser": "^7.0.1"
   },
   "devDependencies": {
     "bun-types": "latest"
