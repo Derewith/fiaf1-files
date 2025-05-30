@@ -27,13 +27,20 @@ jobs:
       - name: Run cache regeneration
         run: bun scripts/fetch-all.ts
 
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: Jonathan Canevese
+          author_email: work@jcanevese.it
+          message: "Aggiornata cache F1"
+          add: "*.json,src/cache.json"
 
-      - name: Commit & push cache.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/cache.json
-          git diff --quiet --cached || git commit -m "🤖 Aggiornata cache F1 $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          git push
+        # - name: Commit & push cache.json
+        #   run: |
+        #     git config user.name "github-actions[bot]"
+        #     git config user.email "github-actions[bot]@users.noreply.github.com"
+        #     git add src/cache.json
+        #     git diff --quiet --cached || git commit -m "🤖 Aggiornata cache F1 $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+        #     git push
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
