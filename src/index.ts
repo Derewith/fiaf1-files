@@ -124,7 +124,7 @@ app.post("/admin/regen", async ({ headers }) => {
   return { status: 200, regenerated: data.length };
 });
 
-app.listen(3000, () => {
+app.listen(process.env.PORT ?? 3000, () => {
   console.log(
     `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
   );
