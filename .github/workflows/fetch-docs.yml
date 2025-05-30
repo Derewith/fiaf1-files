@@ -25,13 +25,8 @@ jobs:
         run: bun install
 
       - name: Run cache regeneration
-        # Se preferisci invocare l’endpoint protetto:
-        # run: |
-        #   curl -X POST https://your-api.com/admin/regen \
-        #     -H "x-cache-token: $CACHE_TOKEN"
-        # Altrimenti, direttamente in locale:
-        run: |
-          bun run tsx -r esm scripts/fetch-all.ts
+        run: bun scripts/fetch-all.ts
+
 
       - name: Commit & push cache.json
         run: |
