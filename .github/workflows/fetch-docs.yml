@@ -2,9 +2,17 @@ name: 🔄 Fetch and Cache F1 Docs
 
 on:
   schedule:
-    # Ogni 15 minuti, solo da marzo (3) a dicembre (12)
-    - cron: "*/15 * * 3-12 *"
-  workflow_dispatch: # Permette il trigger manuale
+    - cron: "0 */1 * * *" # every hour
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Date to run the workflow"
+        required: true
+        type: string
+        default: "in 1 hour"
+concurrency:
+  group: schedule${{ github.event.inputs.date }}
+  cancel-in-progress: true
 
 jobs:
   update-cache:
@@ -34,13 +42,5 @@ jobs:
           author_email: work@jcanevese.it
           message: "Aggiornata cache F1"
           add: "*.json"
-
-        # - name: Commit & push cache.json
-        #   run: |
-        #     git config user.name "github-actions[bot]"
-        #     git config user.email "github-actions[bot]@users.noreply.github.com"
-        #     git add src/cache.json
-        #     git diff --quiet --cached || git commit -m "🤖 Aggiornata cache F1 $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-        #     git push
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
