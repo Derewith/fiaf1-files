@@ -2,7 +2,11 @@ name: 🔄 Fetch and Cache F1 Docs
 
 on:
   schedule:
-    - cron: "0 */1 * * *" # every hour
+    # should run every 8 hours
+    - cron: "0 */8 * * *"
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       date:
