@@ -174,6 +174,11 @@ app.get("/documents", async () => {
   };
 });
 
+app.get("/events", async () => {
+  const config = await loadConfig();
+  return config.eventMappings || {},
+});
+
 // Endpoint interno per rigenerare la cache (protetto con segreto env)
 app.post("/admin/regen", async ({ headers }) => {
   if (headers["x-cache-token"] !== process.env.CACHE_TOKEN) {
