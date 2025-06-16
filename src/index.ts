@@ -176,7 +176,7 @@ app.get("/documents", async () => {
 
 app.get("/events", async () => {
   const config = await loadConfig();
-  return config.eventMappings || {},
+  return config.eventMappings || {};
 });
 
 // Endpoint interno per rigenerare la cache (protetto con segreto env)
