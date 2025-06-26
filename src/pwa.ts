@@ -453,7 +453,7 @@ const app = new Elysia()
             <div class="spinner"></div>
             <p>Loading document...</p>
           </div>
-          <iframe id="document-iframe" src="about:blank" title="Document Viewer" style="background:white"></iframe>
+          <iframe id="document-iframe" src="about:blank" title="Document Viewer" style="background:white" target="_parent"></iframe>
         </div>
         <div class="modal-actions">
           <button id="download-document">Download</button>
@@ -591,7 +591,7 @@ const app = new Elysia()
           modal.style.display = 'flex';
           
           // Set iframe source
-          documentIframe.src = 'https://docs.google.com/gview?url='+doc.href;
+          documentIframe.src = 'https://docs.google.com/gview?url='+doc.href+'&embedded=true';
           //documentIframe.src = doc.href;
           
           // Update download button href
