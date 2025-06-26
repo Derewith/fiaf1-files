@@ -50,14 +50,6 @@ const app = new Elysia()
       <meta name="theme-color" content="#E10600">
       <link rel="icon" href="/assets/images/favicon.ico">
       <link rel="apple-touch-icon" href="/assets/images/fia-formula-logo.png">
-      <!-- PDF.js library -->
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-      <script>
-        // Define the PDF.js worker source
-        window.pdfjsLib = window.pdfjsLib || {};
-        window.pdfjsLib.GlobalWorkerOptions = window.pdfjsLib.GlobalWorkerOptions || {};
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-      </script>
       <style>
         @font-face {
           font-family: 'Futura';
@@ -284,6 +276,13 @@ const app = new Elysia()
           flex-direction: column;
         }
         
+        iframe {
+          flex-grow: 1;
+          border: none;
+          width: 100%;
+          height: 100%;
+        }
+        
         .modal-loading {
           display: flex;
           flex-direction: column;
@@ -324,6 +323,62 @@ const app = new Elysia()
           font-family: 'Futura', sans-serif;
           font-weight: 500;
           margin: 0 10px;
+        }
+        
+        /* Document Viewer Styles */
+        .document-viewer-container {
+          flex-grow: 1;
+          width: 100%;
+          height: 100%;
+          display: none;
+          background-color: #f5f5f5;
+        }
+        
+        #document-viewer {
+          width: 100%;
+          height: 100%;
+          background: white;
+        }
+        
+        .document-fallback {
+          display: none;
+          flex-grow: 1;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 40px;
+          background-color: var(--f1-dark);
+        }
+        
+        .fallback-message {
+          max-width: 500px;
+        }
+        
+        .fallback-message svg {
+          color: var(--f1-red);
+          margin-bottom: 20px;
+        }
+        
+        .fallback-message h3 {
+          font-size: 24px;
+          margin-bottom: 10px;
+        }
+        
+        .fallback-message p {
+          color: var(--f1-gray);
+          margin-bottom: 20px;
+        }
+        
+        .download-btn {
+          background-color: var(--f1-red);
+          color: white;
+          border: none;
+          padding: 12px 25px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-family: 'Futura', sans-serif;
+          font-weight: 500;
+          font-size: 16px;
         }
         
         .empty-state {
@@ -409,69 +464,6 @@ const app = new Elysia()
             display: none !important;
           }
         }
-        
-        /* PDF Viewer Styles */
-        .pdf-container {
-          display: flex;
-          flex-direction: column;
-          flex-grow: 1;
-          background-color: #333;
-          overflow: auto;
-          position: relative;
-        }
-        
-        #pdf-controls {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 10px;
-          background-color: rgba(0,0,0,0.7);
-          position: sticky;
-          top: 0;
-          z-index: 5;
-          gap: 10px;
-        }
-        
-        .pdf-control-btn {
-          background-color: var(--f1-dark);
-          color: white;
-          border: 1px solid var(--f1-gray);
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 5px 10px;
-          cursor: pointer;
-          font-family: 'Futura', sans-serif;
-          font-weight: 300;
-          font-size: 14px;
-        }
-        
-        .pdf-control-btn svg {
-          margin: 0 5px;
-        }
-        
-        .pdf-control-btn:hover {
-          background-color: var(--f1-red);
-          border-color: white;
-        }
-        
-        #page-info {
-          color: white;
-          margin: 0 15px;
-          font-size: 14px;
-        }
-        
-        #pdf-canvas {
-          margin: 0 auto;
-          display: block;
-          background-color: white;
-        }
-        
-        /* Hide the PDF viewer by default */
-        #pdf-viewer {
-          display: none;
-        }
       </style>
     </head>
     <body>
@@ -517,36 +509,31 @@ const app = new Elysia()
             <div class="spinner"></div>
             <p>Loading document...</p>
           </div>
-          <div id="pdf-viewer" class="pdf-container">
-            <div id="pdf-controls">
-              <button id="prev-page" class="pdf-control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Previous
-              </button>
-              <span id="page-info">Page <span id="page-num">0</span> / <span id="page-count">0</span></span>
-              <button id="next-page" class="pdf-control-btn">
-                Next
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button id="zoom-in" class="pdf-control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                </svg>
-              </button>
-              <button id="zoom-out" class="pdf-control-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-                </svg>
-              </button>
-            </div>
-            <canvas id="pdf-canvas"></canvas>
+          <div class="document-viewer-container" id="document-viewer-container">
+            <object id="document-viewer" type="application/pdf" width="100%" height="100%">
+              <p>It appears you don't have a PDF plugin for this browser. 
+              You can <a id="fallback-link" href="#" target="_blank">click here to download the PDF file.</a></p>
+            </object>
           </div>
+          <div class="document-fallback" id="document-fallback">
+            <div class="fallback-message">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="60" height="60">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h3>Trying alternative viewer</h3>
+              <p>Please wait while we attempt to load the document using Google Docs Viewer</p>
+              <div class="spinner" style="margin: 20px auto;"></div>
+              <div id="fallback-buttons" style="display: none;">
+                <button id="direct-download-btn" class="download-btn">Download Document</button>
+                <p style="margin-top: 15px;">or</p>
+                <button id="try-google-viewer-btn" class="download-btn" style="background-color: #333; margin-top: 15px;">Try Google Viewer</button>
+              </div>
+            </div>
+          </div>
+          <iframe id="google-viewer-iframe" style="display: none; flex-grow: 1; border: none; width: 100%; height: 100%; background: white;" src="about:blank"></iframe>
         </div>
         <div class="modal-actions">
+          <button id="view-in-browser">View in Browser</button>
           <button id="download-document">Download</button>
           <button id="modal-close-button">Close</button>
         </div>
@@ -572,16 +559,17 @@ const app = new Elysia()
         const modalTitle = document.getElementById('modal-title');
         const modalClose = document.getElementById('modal-close');
         const modalCloseButton = document.getElementById('modal-close-button');
-        const pdfCanvas = document.getElementById('pdf-canvas');
+        const documentViewer = document.getElementById('document-viewer');
+        const documentViewerContainer = document.getElementById('document-viewer-container');
+        const documentFallback = document.getElementById('document-fallback');
+        const fallbackLink = document.getElementById('fallback-link');
+        const directDownloadBtn = document.getElementById('direct-download-btn');
+        const fallbackButtons = document.getElementById('fallback-buttons');
+        const tryGoogleViewerBtn = document.getElementById('try-google-viewer-btn');
+        const googleViewerIframe = document.getElementById('google-viewer-iframe');
         const modalLoading = document.getElementById('modal-loading');
         const downloadButton = document.getElementById('download-document');
-        const prevPageButton = document.getElementById('prev-page');
-        const nextPageButton = document.getElementById('next-page');
-        const zoomInButton = document.getElementById('zoom-in');
-        const zoomOutButton = document.getElementById('zoom-out');
-        const pageNumSpan = document.getElementById('page-num');
-        const pageCountSpan = document.getElementById('page-count');
-        var pdfDoc = null; // Global PDF document variable
+        const viewInBrowserButton = document.getElementById('view-in-browser');
         
         // Install button
         const installButton = document.getElementById('install-button');
@@ -683,112 +671,136 @@ const app = new Elysia()
         
         // Open document in the modal
         function openDocument(doc) {
+          let currentDocUrl = doc.href;
+          let pdfDisplayAttempted = false;
+          
+          // Reset UI elements
           modalTitle.textContent = doc.title;
           modalLoading.style.display = 'flex';
-          document.getElementById('pdf-viewer').style.display = 'none';
+          documentViewerContainer.style.display = 'none';
+          documentFallback.style.display = 'none';
+          googleViewerIframe.style.display = 'none';
+          fallbackButtons.style.display = 'none';
+          googleViewerIframe.src = 'about:blank';
           modal.style.display = 'flex';
           
-          // Reset current document and page
-          if (pdfDoc) {
-            pdfDoc = null;
-            currentPage = 1;
-            document.getElementById('page-num').textContent = "1";
-            document.getElementById('page-count').textContent = "0";
+          // Set up all action buttons to use current document URL
+          setupActionButtons(currentDocUrl);
+          
+          // First attempt: Try to use object tag for PDF display
+          try {
+            // Set the document source
+            documentViewer.setAttribute('data', currentDocUrl);
+            
+            // Check if object loaded successfully after a short delay
+            setTimeout(() => {
+              // If already moved to google viewer, don't continue
+              if (pdfDisplayAttempted) return;
+              pdfDisplayAttempted = true;
+              
+              try {
+                // Try to use native PDF viewer (object tag)
+                if (isObjectEmpty(documentViewer)) {
+                  // Object tag failed, try Google Docs Viewer
+                  tryGoogleDocsViewer(currentDocUrl);
+                } else {
+                  // Object tag successfully displaying PDF
+                  documentViewerContainer.style.display = 'block';
+                  modalLoading.style.display = 'none';
+                }
+              } catch (error) {
+                // Error checking object, try Google Docs Viewer
+                console.error('Error checking document display:', error);
+                tryGoogleDocsViewer(currentDocUrl);
+              }
+            }, 1500);
+          } catch (error) {
+            console.error('Error with object tag display:', error);
+            // Try Google Docs Viewer as fallback
+            tryGoogleDocsViewer(currentDocUrl);
           }
-          
-          // The direct PDF URL
-          const pdfUrl = doc.href;
-          
-          // Create a proxy URL to avoid CORS issues
-          // Using pdf.js directly with the original PDF URL
-          pdfjsLib.getDocument(pdfUrl).promise
-            .then(function(pdf) {
-              pdfDoc = pdf;
-              document.getElementById('page-count').textContent = pdf.numPages;
-              
-              // Initial render of the PDF
-              renderPage(currentPage);
-              
-              // Show PDF viewer and hide loading spinner
-              document.getElementById('pdf-viewer').style.display = 'flex';
-              modalLoading.style.display = 'none';
-            })
-            .catch(function(error) {
-              console.error('Error loading PDF:', error);
-              modalLoading.style.display = 'none';
-              alert('Could not load the PDF. You can try the download option instead.');
-              // Fallback to download
-              window.open(doc.href, '_blank');
-            });
-          
-          // Update download button onclick
-          downloadButton.onclick = () => {
-            window.open(doc.href, '_blank');
-          };
           
           // Disable scrolling of the background
           document.body.style.overflow = 'hidden';
         }
         
-        // Render a specific page of the PDF
-        function renderPage(pageNumber) {
-          // Ensure pdfDoc is available
-          if (!pdfDoc) return;
+        // Set up all action buttons to use the given URL
+        function setupActionButtons(url) {
+          fallbackLink.href = url;
+          directDownloadBtn.onclick = () => window.open(url, '_blank');
+          downloadButton.onclick = () => window.open(url, '_blank');
+          viewInBrowserButton.onclick = () => window.open(url, '_blank');
           
-          pdfDoc.getPage(pageNumber).then(function(page) {
-            const viewport = page.getViewport({ scale: scale });
+          // Google Viewer button
+          tryGoogleViewerBtn.onclick = () => {
+            documentFallback.style.display = 'none';
+            googleViewerIframe.style.display = 'block';
+            googleViewerIframe.src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(url) + '&embedded=true';
+          };
+        }
+        
+        // Try using Google Docs Viewer
+        function tryGoogleDocsViewer(url) {
+          // Show fallback UI first
+          documentViewerContainer.style.display = 'none';
+          documentFallback.style.display = 'flex';
+          modalLoading.style.display = 'none';
+          
+          // Try loading with Google Docs Viewer after a short delay
+          setTimeout(() => {
+            // Show buttons
+            fallbackButtons.style.display = 'block';
             
-            // Prepare canvas
-            pdfCanvas.height = viewport.height;
-            pdfCanvas.width = viewport.width;
+            // Load Google Viewer in background
+            googleViewerIframe.src = 'https://docs.google.com/gview?url=' + encodeURIComponent(url) + '&embedded=true';
             
-            // Render PDF page
-            const renderContext = {
-              canvasContext: ctx,
-              viewport: viewport
+            // When Google Viewer iframe loads
+            googleViewerIframe.onload = () => {
+              // Check if Google viewer loaded successfully
+              try {
+                // Try to detect if Google viewer shows the PDF or an error page
+                if (googleViewerIframe.contentDocument && 
+                    googleViewerIframe.contentDocument.body && 
+                    googleViewerIframe.contentDocument.body.innerHTML.includes('Google Docs Viewer')) {
+                  // Google viewer looks successful, show it
+                  documentFallback.style.display = 'none';
+                  googleViewerIframe.style.display = 'block';
+                }
+              } catch (e) {
+                // CORS error accessing iframe content - this is normal
+                // We can't check content but can still display the iframe
+                documentFallback.style.display = 'none';
+                googleViewerIframe.style.display = 'block';
+              }
             };
-            
-            page.render(renderContext).promise.then(function() {
-              document.getElementById('page-num').textContent = pageNumber;
-              currentPage = pageNumber;
-              
-              // Enable/disable navigation buttons
-              prevPageButton.disabled = currentPage <= 1;
-              nextPageButton.disabled = currentPage >= pdfDoc.numPages;
-            });
-          });
+          }, 1000);
         }
         
-        // Go to previous page
-        function goPreviousPage() {
-          if (currentPage <= 1) return;
-          currentPage--;
-          renderPage(currentPage);
-        }
-        
-        // Go to next page
-        function goNextPage() {
-          if (currentPage >= pdfDoc.numPages) return;
-          currentPage++;
-          renderPage(currentPage);
-        }
-        
-        // Zoom functions
-        function zoomIn() {
-          scale += 0.25;
-          renderPage(currentPage);
-        }
-        
-        function zoomOut() {
-          if (scale > 0.5) {
-            scale -= 0.25;
-            renderPage(currentPage);
+        // Check if object is empty (failed to load)
+        function isObjectEmpty(obj) {
+          // Try to access object content to see if it loaded
+          try {
+            // Different browsers have different ways to check this
+            // This is a simple check that works in most cases
+            if (obj.contentDocument && obj.contentDocument.body && 
+                obj.contentDocument.body.childElementCount === 0) {
+              return true;
+            }
+            return false;
+          } catch (e) {
+            // If we can't access contentDocument, assume it's working
+            return false;
           }
         }
         
         // Close the modal
         function closeModal() {
           modal.style.display = 'none';
+          
+          // Clean up all viewers
+          documentViewer.setAttribute('data', '');
+          googleViewerIframe.src = 'about:blank';
+          
           // Re-enable scrolling
           document.body.style.overflow = 'auto';
         }
@@ -798,15 +810,6 @@ const app = new Elysia()
         searchInput.addEventListener('input', filterDocuments);
         modalClose.addEventListener('click', closeModal);
         modalCloseButton.addEventListener('click', closeModal);
-        
-        // PDF navigation event listeners
-        prevPageButton.addEventListener('click', goPreviousPage);
-        nextPageButton.addEventListener('click', goNextPage);
-        zoomInButton.addEventListener('click', zoomIn);
-        zoomOutButton.addEventListener('click', zoomOut);
-        
-        // PDF.js global variable
-        window.pdfjsLib = window.pdfjsLib || {};
         
         // Initial load
         filterDocuments();
@@ -883,7 +886,7 @@ const app = new Elysia()
   })
   .get("/service-worker.js", () => {
     return `
-    const CACHE_NAME = 'fia-f1-documents-v2';
+    const CACHE_NAME = 'fia-f1-documents-v1';
     const urlsToCache = [
       '/',
       '/manifest.json',
@@ -897,9 +900,7 @@ const app = new Elysia()
       '/assets/fonts/FuturaCyrillicExtraBold.ttf',
       '/assets/fonts/FuturaCyrillicHeavy.ttf',
       '/assets/fonts/FuturaCyrillicLight.ttf',
-      '/assets/fonts/FuturaCyrillicMedium.ttf',
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'
+      '/assets/fonts/FuturaCyrillicMedium.ttf'
     ];
 
     self.addEventListener('install', event => {
