@@ -50,6 +50,14 @@ const app = new Elysia()
       <meta name="theme-color" content="#E10600">
       <link rel="icon" href="/assets/images/favicon.ico">
       <link rel="apple-touch-icon" href="/assets/images/fia-formula-logo.png">
+      <!-- PDF.js library -->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+      <script>
+        // Define the PDF.js worker source
+        window.pdfjsLib = window.pdfjsLib || {};
+        window.pdfjsLib.GlobalWorkerOptions = window.pdfjsLib.GlobalWorkerOptions || {};
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      </script>
       <style>
         @font-face {
           font-family: 'Futura';
@@ -276,13 +284,6 @@ const app = new Elysia()
           flex-direction: column;
         }
         
-        iframe {
-          flex-grow: 1;
-          border: none;
-          width: 100%;
-          height: 100%;
-        }
-        
         .modal-loading {
           display: flex;
           flex-direction: column;
@@ -408,6 +409,69 @@ const app = new Elysia()
             display: none !important;
           }
         }
+        
+        /* PDF Viewer Styles */
+        .pdf-container {
+          display: flex;
+          flex-direction: column;
+          flex-grow: 1;
+          background-color: #333;
+          overflow: auto;
+          position: relative;
+        }
+        
+        #pdf-controls {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 10px;
+          background-color: rgba(0,0,0,0.7);
+          position: sticky;
+          top: 0;
+          z-index: 5;
+          gap: 10px;
+        }
+        
+        .pdf-control-btn {
+          background-color: var(--f1-dark);
+          color: white;
+          border: 1px solid var(--f1-gray);
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 5px 10px;
+          cursor: pointer;
+          font-family: 'Futura', sans-serif;
+          font-weight: 300;
+          font-size: 14px;
+        }
+        
+        .pdf-control-btn svg {
+          margin: 0 5px;
+        }
+        
+        .pdf-control-btn:hover {
+          background-color: var(--f1-red);
+          border-color: white;
+        }
+        
+        #page-info {
+          color: white;
+          margin: 0 15px;
+          font-size: 14px;
+        }
+        
+        #pdf-canvas {
+          margin: 0 auto;
+          display: block;
+          background-color: white;
+        }
+        
+        /* Hide the PDF viewer by default */
+        #pdf-viewer {
+          display: none;
+        }
       </style>
     </head>
     <body>
@@ -453,7 +517,34 @@ const app = new Elysia()
             <div class="spinner"></div>
             <p>Loading document...</p>
           </div>
-          <iframe id="document-iframe" src="about:blank" title="Document Viewer" style="background:white" target="_parent"></iframe>
+          <div id="pdf-viewer" class="pdf-container">
+            <div id="pdf-controls">
+              <button id="prev-page" class="pdf-control-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
+              <span id="page-info">Page <span id="page-num">0</span> / <span id="page-count">0</span></span>
+              <button id="next-page" class="pdf-control-btn">
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <button id="zoom-in" class="pdf-control-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                </svg>
+              </button>
+              <button id="zoom-out" class="pdf-control-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+                </svg>
+              </button>
+            </div>
+            <canvas id="pdf-canvas"></canvas>
+          </div>
         </div>
         <div class="modal-actions">
           <button id="download-document">Download</button>
@@ -481,9 +572,16 @@ const app = new Elysia()
         const modalTitle = document.getElementById('modal-title');
         const modalClose = document.getElementById('modal-close');
         const modalCloseButton = document.getElementById('modal-close-button');
-        const documentIframe = document.getElementById('document-iframe');
+        const pdfCanvas = document.getElementById('pdf-canvas');
         const modalLoading = document.getElementById('modal-loading');
         const downloadButton = document.getElementById('download-document');
+        const prevPageButton = document.getElementById('prev-page');
+        const nextPageButton = document.getElementById('next-page');
+        const zoomInButton = document.getElementById('zoom-in');
+        const zoomOutButton = document.getElementById('zoom-out');
+        const pageNumSpan = document.getElementById('page-num');
+        const pageCountSpan = document.getElementById('page-count');
+        var pdfDoc = null; // Global PDF document variable
         
         // Install button
         const installButton = document.getElementById('install-button');
@@ -587,32 +685,110 @@ const app = new Elysia()
         function openDocument(doc) {
           modalTitle.textContent = doc.title;
           modalLoading.style.display = 'flex';
-          documentIframe.style.display = 'none';
+          document.getElementById('pdf-viewer').style.display = 'none';
           modal.style.display = 'flex';
           
-          // Set iframe source
-          documentIframe.src = 'https://docs.google.com/gview?url='+doc.href+'&embedded=true';
-          //documentIframe.src = doc.href;
+          // Reset current document and page
+          if (pdfDoc) {
+            pdfDoc = null;
+            currentPage = 1;
+            document.getElementById('page-num').textContent = "1";
+            document.getElementById('page-count').textContent = "0";
+          }
           
-          // Update download button href
+          // The direct PDF URL
+          const pdfUrl = doc.href;
+          
+          // Create a proxy URL to avoid CORS issues
+          // Using pdf.js directly with the original PDF URL
+          pdfjsLib.getDocument(pdfUrl).promise
+            .then(function(pdf) {
+              pdfDoc = pdf;
+              document.getElementById('page-count').textContent = pdf.numPages;
+              
+              // Initial render of the PDF
+              renderPage(currentPage);
+              
+              // Show PDF viewer and hide loading spinner
+              document.getElementById('pdf-viewer').style.display = 'flex';
+              modalLoading.style.display = 'none';
+            })
+            .catch(function(error) {
+              console.error('Error loading PDF:', error);
+              modalLoading.style.display = 'none';
+              alert('Could not load the PDF. You can try the download option instead.');
+              // Fallback to download
+              window.open(doc.href, '_blank');
+            });
+          
+          // Update download button onclick
           downloadButton.onclick = () => {
             window.open(doc.href, '_blank');
-          };
-          
-          // When iframe loads
-          documentIframe.onload = () => {
-            modalLoading.style.display = 'none';
-            documentIframe.style.display = 'block';
           };
           
           // Disable scrolling of the background
           document.body.style.overflow = 'hidden';
         }
         
+        // Render a specific page of the PDF
+        function renderPage(pageNumber) {
+          // Ensure pdfDoc is available
+          if (!pdfDoc) return;
+          
+          pdfDoc.getPage(pageNumber).then(function(page) {
+            const viewport = page.getViewport({ scale: scale });
+            
+            // Prepare canvas
+            pdfCanvas.height = viewport.height;
+            pdfCanvas.width = viewport.width;
+            
+            // Render PDF page
+            const renderContext = {
+              canvasContext: ctx,
+              viewport: viewport
+            };
+            
+            page.render(renderContext).promise.then(function() {
+              document.getElementById('page-num').textContent = pageNumber;
+              currentPage = pageNumber;
+              
+              // Enable/disable navigation buttons
+              prevPageButton.disabled = currentPage <= 1;
+              nextPageButton.disabled = currentPage >= pdfDoc.numPages;
+            });
+          });
+        }
+        
+        // Go to previous page
+        function goPreviousPage() {
+          if (currentPage <= 1) return;
+          currentPage--;
+          renderPage(currentPage);
+        }
+        
+        // Go to next page
+        function goNextPage() {
+          if (currentPage >= pdfDoc.numPages) return;
+          currentPage++;
+          renderPage(currentPage);
+        }
+        
+        // Zoom functions
+        function zoomIn() {
+          scale += 0.25;
+          renderPage(currentPage);
+        }
+        
+        function zoomOut() {
+          if (scale > 0.5) {
+            scale -= 0.25;
+            renderPage(currentPage);
+          }
+        }
+        
         // Close the modal
         function closeModal() {
           modal.style.display = 'none';
-          documentIframe.src = '';
           // Re-enable scrolling
           document.body.style.overflow = 'auto';
         }
@@ -622,6 +798,15 @@ const app = new Elysia()
         searchInput.addEventListener('input', filterDocuments);
         modalClose.addEventListener('click', closeModal);
         modalCloseButton.addEventListener('click', closeModal);
+        
+        // PDF navigation event listeners
+        prevPageButton.addEventListener('click', goPreviousPage);
+        nextPageButton.addEventListener('click', goNextPage);
+        zoomInButton.addEventListener('click', zoomIn);
+        zoomOutButton.addEventListener('click', zoomOut);
+        
+        // PDF.js global variable
+        window.pdfjsLib = window.pdfjsLib || {};
         
         // Initial load
         filterDocuments();
@@ -698,7 +883,7 @@ const app = new Elysia()
   })
   .get("/service-worker.js", () => {
     return `
-    const CACHE_NAME = 'fia-f1-documents-v1';
+    const CACHE_NAME = 'fia-f1-documents-v2';
     const urlsToCache = [
       '/',
       '/manifest.json',
@@ -712,7 +897,9 @@ const app = new Elysia()
       '/assets/fonts/FuturaCyrillicExtraBold.ttf',
       '/assets/fonts/FuturaCyrillicHeavy.ttf',
       '/assets/fonts/FuturaCyrillicLight.ttf',
-      '/assets/fonts/FuturaCyrillicMedium.ttf'
+      '/assets/fonts/FuturaCyrillicMedium.ttf',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'
     ];
 
     self.addEventListener('install', event => {
