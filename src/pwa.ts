@@ -773,6 +773,11 @@ const app = new Elysia()
       );
     });
     `;
+  })
+  .get("/health", () => {
+    return {
+      status: "ok",
+      message: "FIA F1 Documents PWA is running smoothly.",
+    };
   });
-
 export { app as pwaApp };

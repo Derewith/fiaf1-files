@@ -40,8 +40,7 @@ bun run build:pwa
 bun run start:pwa
 ```
 
-By default, the API runs on port 3000 and the PWA on port 3001.
-You can change these by setting the `API_PORT` and `PWA_PORT` environment variables.
+By default, the API runs on port 3000 and the PWA on port 3001 to work with railway deployments
 
 ## API Endpoints
 

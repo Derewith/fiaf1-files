@@ -42,6 +42,13 @@ app.get("/", () => {
           `;
 });
 
+app.get("/health", () => {
+    return {
+      status: "ok",
+      message: "FIA F1 Documents PWA is running smoothly.",
+    };
+  });
+
 app.listen(process.env.PORT ?? 3000, () => {
   console.log(
     `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
