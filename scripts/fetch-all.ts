@@ -5,7 +5,7 @@
  * Proprietary and confidential by Jonathan Canevese
  */
 
-import { regenerateCache } from "../src/index";
+import { regenerateCache } from "../src";
 
 async function main() {
   try {

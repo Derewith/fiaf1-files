@@ -48,3 +48,7 @@ jobs:
           add: "*.json"
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+
+      # - name: Push changes
+      #   uses: actions/checkout@v4
+      # run: railway up --ci --environment=$RAILWAY_ENVIRONMENT_ID --service=$RAILWAY_SERVICE_ID
