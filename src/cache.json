@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-06-27T00:46:32.424Z",
+  "timestamp": "2025-06-27T08:16:28.846Z",
   "data": [
     {
       "eventId": 56438,
@@ -4776,6 +4776,22 @@
       "published": "11.06.25 20:48",
       "originalHref": "https://www.fia.com/system/files/decision-document/2025_canadian_grand_prix_-_event_notes_-_pirelli_preview.pdf",
       "eventName": "Canadian Grand Prix"
+    },
+    {
+      "eventId": 56440,
+      "href": "/documents/2025_austrian_grand_prix_-_self_scrutineering.pdf",
+      "title": "Doc 8 - Self Scrutineering",
+      "published": "27.06.25 09:36",
+      "originalHref": "https://www.fia.com/system/files/decision-document/2025_austrian_grand_prix_-_self_scrutineering.pdf",
+      "eventName": "Austria Grand Prix"
+    },
+    {
+      "eventId": 56440,
+      "href": "/documents/2025_austrian_grand_prix_-_pu_elements_used_per_driver_up_to_now.pdf",
+      "title": "Doc 7 - PU elements used per driver up to now",
+      "published": "27.06.25 09:33",
+      "originalHref": "https://www.fia.com/system/files/decision-document/2025_austrian_grand_prix_-_pu_elements_used_per_driver_up_to_now.pdf",
+      "eventName": "Austria Grand Prix"
     },
     {
       "eventId": 56440,
