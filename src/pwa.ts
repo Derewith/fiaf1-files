@@ -15,6 +15,12 @@ const app = new Elysia()
       prefix: "/assets",
     })
   )
+  .use(
+    staticPlugin({
+      assets: path.join(__dirname, "../public"),
+      prefix: "",
+    })
+  )
   .get("/", async () => {
     const cache = await loadCache();
     const config = await loadConfig();
@@ -671,7 +677,13 @@ const app = new Elysia()
         
         // Open document in the modal
         function openDocument(doc) {
+          // Use local document URL if it's a server-side document (starts with /documents/)
           let currentDocUrl = doc.href;
+          const isLocalDocument = currentDocUrl.startsWith('/documents/');
+          
+          // For downloads, use the original URL if available
+          const downloadUrl = doc.originalHref || currentDocUrl;
+          
           let pdfDisplayAttempted = false;
           
           // Reset UI elements
@@ -684,8 +696,9 @@ const app = new Elysia()
           googleViewerIframe.src = 'about:blank';
           modal.style.display = 'flex';
           
-          // Set up all action buttons to use current document URL
-          setupActionButtons(currentDocUrl);
+          // Set up all action buttons 
+          // For downloads, prefer the original source URL
+          setupActionButtons(downloadUrl);
           
           // First attempt: Try to use object tag for PDF display
           try {
@@ -741,7 +754,20 @@ const app = new Elysia()
         
         // Try using Google Docs Viewer
         function tryGoogleDocsViewer(url) {
-          // Show fallback UI first
+          // Check if this is a local document - if so, display it directly
+          if (url.startsWith('/documents/')) {
+            // Local document - show in iframe directly
+            documentViewerContainer.style.display = 'none';
+            documentFallback.style.display = 'none';
+            modalLoading.style.display = 'none';
+            
+            // Display the PDF directly in an iframe
+            googleViewerIframe.src = url;
+            googleViewerIframe.style.display = 'block';
+            return;
+          }
+          
+          // External document - show fallback UI first
           documentViewerContainer.style.display = 'none';
           documentFallback.style.display = 'flex';
           modalLoading.style.display = 'none';
@@ -886,7 +912,8 @@ const app = new Elysia()
   })
   .get("/service-worker.js", () => {
     return `
-    const CACHE_NAME = 'fia-f1-documents-v1';
+    const CACHE_NAME = 'fia-f1-documents-v2';
+    // Core assets that should always be cached
     const urlsToCache = [
       '/',
       '/manifest.json',
@@ -913,6 +940,29 @@ const app = new Elysia()
     });
 
     self.addEventListener('fetch', event => {
+      // Special handling for document files - always cache them
+      if (event.request.url.includes('/documents/')) {
+        event.respondWith(
+          caches.open(CACHE_NAME).then(cache => {
+            return cache.match(event.request).then(response => {
+              if (response) {
+                // Cache hit for document
+                return response;
+              }
+              
+              return fetch(event.request).then(networkResponse => {
+                // Clone the response and cache it for future use
+                const responseToCache = networkResponse.clone();
+                cache.put(event.request, responseToCache);
+                return networkResponse;
+              });
+            });
+          })
+        );
+        return;
+      }
+      
+      // Standard handling for other resources
       event.respondWith(
         caches.match(event.request)
           .then(response => {

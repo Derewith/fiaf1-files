@@ -6,6 +6,7 @@
     "dev:pwa": "bun run --watch src/main.ts",
     "build": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile server src/index.ts",
     "build:pwa": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile pwa-server src/main.ts",
+    "fetch": "bun run scripts/fetch-all.ts",
     "start": "./server",
     "start:pwa": "./pwa-server"
   },

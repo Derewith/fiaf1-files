@@ -6,11 +6,91 @@
  */
 import path from "path";
 import fs from "fs/promises";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
 import { Config, DocItem, Cache } from "./types";
 import { parse } from "node-html-parser";
+import crypto from "crypto";
 
 const CONFIG_PATH = path.resolve(__dirname, "./config.json");
 const CACHE_PATH = path.resolve(__dirname, "./cache.json");
+const DOCUMENTS_DIR = path.resolve(__dirname, "../public/documents");
+
+// Ensure documents directory exists
+async function ensureDocumentsDir() {
+  try {
+    await fs.mkdir(DOCUMENTS_DIR, { recursive: true });
+  } catch (error) {
+    console.error("Error creating documents directory:", error);
+  }
+}
+
+// Generate a safe filename from a URL
+function getSafeFilenameFromUrl(url: string): string {
+  // Extract filename from URL or create a hash if no filename is found
+  const urlObj = new URL(url);
+  const pathname = urlObj.pathname;
+  let filename = path.basename(pathname);
+
+  // If no proper filename or it doesn't end with .pdf, create a hash-based filename
+  if (!filename || !filename.toLowerCase().endsWith(".pdf")) {
+    const hash = crypto.createHash("md5").update(url).digest("hex");
+    filename = `document-${hash}.pdf`;
+  }
+
+  // Make filename safe for filesystem
+  return filename.replace(/[^a-z0-9.-]/gi, "_");
+}
+
+// Download a single PDF and return the local path
+async function downloadPdf(url: string): Promise<string | null> {
+  const safeFilename = getSafeFilenameFromUrl(url);
+  const outputPath = path.join(DOCUMENTS_DIR, safeFilename);
+
+  // Check if file already exists (to avoid redownloading)
+  try {
+    await fs.access(outputPath);
+    console.log(`File already exists: ${safeFilename}`);
+    return `/documents/${safeFilename}`;
+  } catch (error) {
+    // File doesn't exist, proceed with download
+  }
+
+  console.log(`Downloading PDF: ${url} -> ${safeFilename}`);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        Accept: "application/pdf",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    // Check if the response is actually a PDF
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("pdf")) {
+      console.warn(
+        `Warning: Content may not be a PDF. Content-Type: ${contentType}`
+      );
+    }
+
+    // Write the file
+    const fileStream = createWriteStream(outputPath);
+    await pipeline(response.body!, fileStream);
+
+    return `/documents/${safeFilename}`;
+  } catch (error) {
+    console.error(`Error downloading PDF ${url}:`, error);
+    return null;
+  }
+}
+
+const CACHE_EXPIRATION_MS = 1000 * 60 * 60; // 1 hour
 
 async function loadConfig(): Promise<Config> {
   const raw = await fs.readFile(CONFIG_PATH, "utf-8");
@@ -94,6 +174,9 @@ async function fetchDocsFor(
 
 async function regenerateCache() {
   try {
+    // Make sure documents directory exists
+    await ensureDocumentsDir();
+    
     const { baseUrl, eventIds, eventMappings = {} } = await loadConfig();
     console.log(`Starting cache regeneration for ${eventIds.length} events...`);
 
@@ -105,13 +188,30 @@ async function regenerateCache() {
         console.log(`Retrieved ${items.length} documents for event ${id}`);
 
         // Process and add items to the final data array
-        const processedItems = items.map((item) => ({
-          ...item,
-          href: item.href.startsWith("/")
+        const processedItems = [];
+        
+        for (const item of items) {
+          // Create the original URL for the document
+          const originalUrl = item.href.startsWith("/")
             ? `${baseUrl}${item.href}`
-            : `${baseUrl}/${item.href}`,
-          eventName: eventMappings[item.eventId] || "Unknown Event",
-        }));
+            : `${baseUrl}/${item.href}`;
+            
+          console.log(`Processing document: ${originalUrl}`);
+          
+          // Download the PDF and get the local path
+          const localPath = await downloadPdf(originalUrl);
+          
+          // Add to processed items with both original URL and local path
+          processedItems.push({
+            ...item,
+            originalHref: originalUrl, // Keep the original URL for reference
+            href: localPath || originalUrl, // Use local path if download was successful, otherwise use original URL
+            eventName: eventMappings[item.eventId] || "Unknown Event",
+          });
+          
+          // Add a small delay between downloads to reduce load
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
 
         data.push(...processedItems);
 
@@ -121,7 +221,7 @@ async function regenerateCache() {
           console.log(`Intermediate cache saved with ${data.length} documents`);
         }
 
-        // Add a small delay between requests to reduce server load
+        // Add a small delay between events to reduce server load
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
         console.error(`Failed to process event ${id}:`, error);
@@ -145,4 +245,4 @@ async function regenerateCache() {
   }
 }
 
-export { loadConfig, loadCache, regenerateCache };
+export { loadConfig, loadCache, regenerateCache, downloadPdf, ensureDocumentsDir };

@@ -8,8 +8,10 @@
 interface DocItem {
   eventId: number;
   href: string;
+  originalHref?: string; // Original FIA URL before downloading
   title: string;
   published: string;
+  eventName?: string;
 }
 
 interface Config {
