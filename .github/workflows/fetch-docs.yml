@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Fetch and update grand prix events
+        run: bun run fetch-events
+
       - name: Run cache regeneration
         run: bun scripts/fetch-all.ts
       

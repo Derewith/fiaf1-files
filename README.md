@@ -15,6 +15,20 @@ A REST API and Progressive Web App (PWA) for viewing official FIA Formula 1 docu
 
 ## Getting Started
 
+### Automatic Event Discovery
+
+The system now includes automatic discovery of new Formula 1 events:
+
+```bash
+# Fetch and update event IDs from FIA website
+bun run fetch-events
+
+# Test the event fetcher with sample data
+bun run fetch-events:test
+```
+
+This automatically updates the configuration with new race IDs as they are published on the FIA website.
+
 ### Fetch Documents
 
 Before starting the server for the first time, you should fetch and cache all documents:

@@ -7,6 +7,8 @@
     "build": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile server src/index.ts",
     "build:pwa": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile pwa-server src/main.ts",
     "fetch": "bun run scripts/fetch-all.ts",
+    "fetch-events": "bun run scripts/fetch-grand-prix-events.ts",
+    "fetch-events:test": "bun run scripts/fetch-grand-prix-events.ts --test",
     "start": "./server",
     "start:pwa": "./pwa-server"
   },
