@@ -2,7 +2,7 @@
   "baseUrl": "https://www.fia.com",
   "eventIds": [
     56438, 56437, 56436, 56435, 55041, 55040, 55039, 55038, 55037, 55323, 56439,
-    56440
+    56440, 58043, 56442
   ],
   "eventMappings": {
     "56438": "Spanish Grand Prix",
@@ -17,6 +17,8 @@
     "55323": "Bahrain Tests Season 2025",
     "56439": "Canadian Grand Prix",
     "56440": "Austria Grand Prix",
+    "58043": "British Grand Prix",
+    "56442": "Belgian Grand Prix",
     "2": "BRITAIN",
     "3": "BELGIUM",
     "4": "HUNGARY",
